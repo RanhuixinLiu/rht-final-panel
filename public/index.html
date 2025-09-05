@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RHT 控制面板</title>
+    <style>
+        body { font-family: sans-serif; padding: 2em; }
+        button { font-size: 1.2em; margin: 10px; padding: 10px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>设备控制面板</h1>
+    <p>这是一个基于 Vercel 代理的控制面板。</p>
+    <hr>
+
+    <h3>设备 (ID: 52709) - 开关 (ID: 301753)</h3>
+    <button onclick="turnOnSwitch(52709, 301753, 17300)">打开 IO1 开关</button>
+    <button onclick="turnOffSwitch(52709, 301753, 17300)">关闭 IO1 开關</button>
+
+    <script>
+        /**
+         * 通用的設定數據點函數
+         * @param {number} deviceId - 主設備ID (cmd_did)
+         * @param {number} dataStreamId - 要控制的數據點ID (dsid)
+         * @param {number} serviceId - 數據點所屬的服務ID (sdid)
+         * @param {number | string} value - 您想要設定的值 (例如 1, 0, 或其他)
+         */
+        async function setDataPoint(deviceId, dataStreamId, serviceId, value) {
+          const apiPath = '/api/v1/device/cmd';
+          const proxyUrl = '/api/proxy' + apiPath;
+
+          const contentObject = {
+            op: "set_dp",
+            payload: {
+              data: [{ dsid: dataStreamId, value: value }],
+              sdid: serviceId
+            },
+            cmd_sdid: serviceId
+          };
+          const contentString = JSON.stringify(contentObject);
+          const finalPayload = {
+            cmd_did: deviceId,
+            cmd_rw: "W",
+            cmd_content: contentString
+          };
+
+          try {
+            console.log("正在发送指令, Payload:", JSON.stringify(finalPayload, null, 2));
+            const response = await fetch(proxyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(finalPayload)
+            });
+            const result = await response.json();
+            if (response.ok && result.code === 200) {
+              alert('指令发送成功！');
+              console.log('服务器响应:', result);
+            } else {
+              alert('指令发送失败！错误信息: ' + (result.msg || '未知错误'));
+              console.error('服务器错误响应:', result);
+            }
+          } catch (error) {
+            console.error('发送指令时发生网络错误:', error);
+            alert('发送指令时发生网络错误，请查看控制台。');
+          }
+        }
+
+        function turnOnSwitch(deviceId, dataStreamId, serviceId) {
+          setDataPoint(deviceId, dataStreamId, serviceId, 1);
+        }
+
+        function turnOffSwitch(deviceId, dataStreamId, serviceId) {
+          setDataPoint(deviceId, dataStreamId, serviceId, 0);
+        }
+    </script>
+</body>
+</html>
